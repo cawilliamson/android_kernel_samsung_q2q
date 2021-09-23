@@ -276,4 +276,6 @@ source "drivers/input/sec_input/stm_fold/Kconfig" # ADDED BY LEGO AUTOMATICALLY:
 source "drivers/battery/fuelgauge/max77705_fuelgauge/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 source "drivers/input/sec_input/stm_spi/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
 source "drivers/battery/wireless/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
+source "techpack/datarmnet/Kconfig"
+source "techpack/datarmnet-ext/Kconfig"
 endmenu
