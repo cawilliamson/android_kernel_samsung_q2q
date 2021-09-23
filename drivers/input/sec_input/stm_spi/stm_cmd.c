@@ -262,7 +262,7 @@ static ssize_t read_support_feature(struct device *dev,
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", feature);
 }
 
-ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf)
+ssize_t stm_get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct stm_ts_data *ts = container_of(sec, struct stm_ts_data, sec);
@@ -331,7 +331,7 @@ ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, char *buf
 		goto out;
 	}
 
-	/* legacy get_lp_dump */
+	/* legacy stm_get_lp_dump */
 	input_info(true, &ts->client->dev, "%s: DEBUG format=%d, num=%d, start=%d, end=%d, current_index=%d\n",
 			__func__, ts->sponge_dump_format, ts->sponge_dump_event, dump_start, dump_end, current_index);
 
@@ -643,7 +643,7 @@ static DEVICE_ATTR(hw_param, 0664, hardware_param_show, hardware_param_store);
 static DEVICE_ATTR(read_ambient_info, 0444, read_ambient_info_show, NULL);
 static DEVICE_ATTR(sensitivity_mode, 0664, sensitivity_mode_show, sensitivity_mode_store);
 static DEVICE_ATTR(support_feature, 0444, read_support_feature, NULL);
-static DEVICE_ATTR(get_lp_dump, 0444, get_lp_dump, NULL);
+static DEVICE_ATTR(stm_get_lp_dump, 0444, stm_get_lp_dump, NULL);
 static DEVICE_ATTR(prox_power_off, 0664, prox_power_off_show, prox_power_off_store);
 static DEVICE_ATTR(ear_detect_enable, 0664, ear_detect_enable_show, ear_detect_enable_store);
 static DEVICE_ATTR(virtual_prox, 0664, protos_event_show, protos_event_store);
@@ -658,7 +658,7 @@ static struct attribute *cmd_attributes[] = {
 	&dev_attr_read_ambient_info.attr,
 	&dev_attr_sensitivity_mode.attr,
 	&dev_attr_support_feature.attr,
-	&dev_attr_get_lp_dump.attr,
+	&dev_attr_stm_get_lp_dump.attr,
 	&dev_attr_prox_power_off.attr,
 	&dev_attr_ear_detect_enable.attr,
 	&dev_attr_virtual_prox.attr,
@@ -678,16 +678,16 @@ static void enter_factory_mode(struct stm_ts_data *ts, bool fac_mode)
 	if (ts->plat_data->power_state == SEC_INPUT_STATE_POWER_OFF)
 		return;
 
-	ts->stm_ts_systemreset(ts, 50);
+	ts->stm_stm_ts_systemreset(ts, 50);
 
-	stm_ts_release_all_finger(ts);
+	stm_stm_ts_release_all_finger(ts);
 
 	if (fac_mode) {
-		stm_ts_execute_autotune(ts, false);
+		stm_stm_ts_execute_autotune(ts, false);
 		sec_delay(50);
 	}
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	sec_delay(50);
 }
@@ -842,7 +842,7 @@ static void stm_ts_print_channel(struct stm_ts_data *ts, s16 *tx_data, s16 *rx_d
 	vfree(pStr);
 }
 
-void stm_ts_print_frame(struct stm_ts_data *ts, short *min, short *max)
+void stm_stm_ts_print_frame(struct stm_ts_data *ts, short *min, short *max)
 {
 	int i = 0;
 	int j = 0;
@@ -899,7 +899,7 @@ void stm_ts_print_frame(struct stm_ts_data *ts, short *min, short *max)
 	kfree(pStr);
 }
 
-int stm_ts_read_frame(struct stm_ts_data *ts, u8 type, short *min, short *max)
+int stm_stm_ts_read_frame(struct stm_ts_data *ts, u8 type, short *min, short *max)
 {
 	struct stm_ts_syncframeheader *psyncframeheader;
 	u8 reg[8] = { 0 };
@@ -978,7 +978,7 @@ int stm_ts_read_frame(struct stm_ts_data *ts, u8 type, short *min, short *max)
 		break;
 	}
 
-	stm_ts_print_frame(ts, min, max);
+	stm_stm_ts_print_frame(ts, min, max);
 
 	if (!ts->info_work_done) {
 	if (type == TYPE_RAW_DATA) {
@@ -1003,7 +1003,7 @@ ERROREXIT:
 	return rc;
 }
 
-int stm_ts_read_nonsync_frame(struct stm_ts_data *ts, short *min, short *max)
+int stm_stm_ts_read_nonsync_frame(struct stm_ts_data *ts, short *min, short *max)
 {
 	struct stm_ts_syncframeheader *psyncframeheader;
 	u8 reg[8] = { 0 };
@@ -1079,14 +1079,14 @@ int stm_ts_read_nonsync_frame(struct stm_ts_data *ts, short *min, short *max)
 	for (i = 0; i < totalbytes / 2; i++)
 		ts->pFrame[i] = (short)(pRead[i * 2] + (pRead[i * 2 + 1] << 8));
 
-	stm_ts_print_frame(ts, min, max);
+	stm_stm_ts_print_frame(ts, min, max);
 
 ERROREXIT:
 	kfree(pRead);
 	return rc;
 }
 
-int stm_ts_fw_wait_for_jitter_result(struct stm_ts_data *ts, u8 *reg, u8 count, s16 *ret1, s16 *ret2)
+int stm_stm_ts_fw_wait_for_jitter_result(struct stm_ts_data *ts, u8 *reg, u8 count, s16 *ret1, s16 *ret2)
 {
 	int rc = 0;
 	u8 address;
@@ -1156,7 +1156,7 @@ int stm_ts_fw_wait_for_jitter_result(struct stm_ts_data *ts, u8 *reg, u8 count, 
 	return rc;
 }
 
-void stm_ts_checking_miscal(struct stm_ts_data *ts)
+void stm_stm_ts_checking_miscal(struct stm_ts_data *ts)
 {
 	u8 reg[3] = { 0 };
 	u8 data[2] = { 0 };
@@ -1167,10 +1167,10 @@ void stm_ts_checking_miscal(struct stm_ts_data *ts)
 
 	ts->miscal_result = MISCAL_PASS;
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true);
 
-	stm_ts_release_all_finger(ts);
+	stm_stm_ts_release_all_finger(ts);
 
 	/* get the raw data after C7 02 : mis cal test */
 	reg[0] = 0xC7;
@@ -1179,7 +1179,7 @@ void stm_ts_checking_miscal(struct stm_ts_data *ts)
 	ts->stm_ts_spi_write(ts, &reg[0], 2, NULL, 0);
 	sec_delay(300);
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s: [miscal diff data]\n", __func__);
-	stm_ts_read_nonsync_frame(ts, &min, &max);
+	stm_stm_ts_read_nonsync_frame(ts, &min, &max);
 
 	reg[0] = 0xC7;
 	reg[1] = 0x0B;
@@ -1198,14 +1198,14 @@ void stm_ts_checking_miscal(struct stm_ts_data *ts)
 	if (min < -miscal_thd)
 		ts->miscal_result = MISCAL_FAIL;
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	input_raw_info_d(ts->plat_data->support_dual_foldable,
 			&ts->client->dev, "%s: mis cal threshold:%d/%d, min/max :%d/%d, miscal:%s\n",
 			__func__, miscal_thd, -miscal_thd, min, max, ts->miscal_result == MISCAL_PASS ? "PASS" : "FAIL");
 }
 
-int stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
+int stm_stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
 {
 	u8 cmd = STM_TS_READ_ONE_EVENT;
 	u8 reg[4] = { 0 };
@@ -1215,16 +1215,16 @@ int stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
 	int retry = 0;
 	int result = 0;
 
-	result = ts->stm_ts_systemreset(ts, 0);
+	result = ts->stm_stm_ts_systemreset(ts, 0);
 	if (result < 0) {
-		input_info(true, &ts->client->dev, "%s: stm_ts_systemreset fail (%d)\n", __func__, result);
+		input_info(true, &ts->client->dev, "%s: stm_stm_ts_systemreset fail (%d)\n", __func__, result);
 		return result;
 	}
 
 	disable_irq(ts->irq);
-	stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true);
+	stm_stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true);
 
-	stm_ts_release_all_finger(ts);
+	stm_stm_ts_release_all_finger(ts);
 
 	reg[0] = 0xA4;
 	reg[1] = 0x04;
@@ -1338,7 +1338,7 @@ int stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
 		sec_delay(20);
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
+	ts->stm_stm_ts_systemreset(ts, 0);
 
 	ts->plat_data->touch_functions = (ts->plat_data->touch_functions & (~STM_TS_TOUCHTYPE_BIT_COVER));
 	if (ts->glove_enabled)
@@ -1346,7 +1346,7 @@ int stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
 	else
 		ts->plat_data->touch_functions = ts->plat_data->touch_functions & (~STM_TS_TOUCHTYPE_BIT_GLOVE);
 
-	stm_ts_set_touch_function(ts);
+	stm_stm_ts_set_touch_function(ts);
 	sec_delay(10);
 
 #ifdef STM_TS_SUPPORT_TA_MODE
@@ -1364,7 +1364,7 @@ int stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
 
 	ts->plat_data->touch_count = 0;
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	enable_irq(ts->irq);
 
@@ -1377,7 +1377,7 @@ int stm_ts_panel_ito_test(struct stm_ts_data *ts, int testmode)
 	return result;
 }
 
-int stm_ts_panel_test_result(struct stm_ts_data *ts, int type)
+int stm_stm_ts_panel_test_result(struct stm_ts_data *ts, int type)
 {
 	u8 data[STM_TS_EVENT_BUFF_SIZE];
 	u8 cmd = STM_TS_READ_ONE_EVENT;
@@ -1517,7 +1517,7 @@ int stm_ts_panel_test_result(struct stm_ts_data *ts, int type)
 
 	/* read rawdata */
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
-	stm_ts_read_nonsync_frame(ts, &temp_min, &temp_max);
+	stm_stm_ts_read_nonsync_frame(ts, &temp_min, &temp_max);
 
 	if (type == OPEN_TEST && result == -ITO_FAIL_OPEN) {
 		snprintf(result_buff, sizeof(result_buff), "NG");
@@ -1642,7 +1642,7 @@ static int stm_ts_panel_test_micro_result(struct stm_ts_data *ts, int type)
 			goto error;
 	}
 
-	if (stm_ts_wait_for_echo_event(ts, &save_cmd[0], 14, 0) < 0) {
+	if (stm_stm_ts_wait_for_echo_event(ts, &save_cmd[0], 14, 0) < 0) {
 		input_err(true, &ts->client->dev, "%s: save result failed: %d\n", __func__, ret);
 		goto error;
 	}
@@ -1737,7 +1737,7 @@ static void get_fw_ver_ic(void *device_data)
 		return;
 	}
 
-	stm_ts_get_version_info(ts);
+	stm_stm_ts_get_version_info(ts);
 
 	snprintf(buff, sizeof(buff), "ST%02X%02X%02X%02X",
 			ts->ic_name_of_ic,
@@ -1826,7 +1826,7 @@ static void module_off_master(void *device_data)
 	char buff[3] = { 0 };
 	int ret = 0;
 
-	ret = stm_ts_stop_device(ts);
+	ret = stm_stm_ts_stop_device(ts);
 
 	if (ret == 0)
 		snprintf(buff, sizeof(buff), "OK");
@@ -1849,7 +1849,7 @@ static void module_on_master(void *device_data)
 	char buff[3] = { 0 };
 	int ret = 0;
 
-	ret = stm_ts_start_device(ts);
+	ret = stm_stm_ts_start_device(ts);
 
 	if (ret == 0)
 		snprintf(buff, sizeof(buff), "OK");
@@ -1918,8 +1918,8 @@ static void run_jitter_test(void *device_data)
 		return;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_release_all_finger(ts);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_release_all_finger(ts);
 
 	/* lock active scan mode */
 	reg[0] = 0xA0;
@@ -1934,14 +1934,14 @@ static void run_jitter_test(void *device_data)
 	reg[2] = 0x64;	//100 frame
 	reg[3] = 0x00;
 
-	ret = stm_ts_fw_wait_for_jitter_result(ts, reg, 4, &mutual_min, &mutual_max);
+	ret = stm_stm_ts_fw_wait_for_jitter_result(ts, reg, 4, &mutual_min, &mutual_max);
 	if (ret < 0) {
 		input_info(true, &ts->client->dev, "%s: failed to read Mutual jitter\n", __func__);
 		goto ERROR;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "%d", mutual_max);
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -1954,8 +1954,8 @@ static void run_jitter_test(void *device_data)
 	return;
 
 ERROR:
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -1987,11 +1987,11 @@ static void run_mutual_jitter(void *device_data)
 		return;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_release_all_finger(ts);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_release_all_finger(ts);
 
 	//lock active scan mode.
-	stm_ts_fix_active_mode(ts, true);
+	stm_stm_ts_fix_active_mode(ts, true);
 
 	// Mutual jitter.
 	reg[0] = 0xC7;
@@ -1999,14 +1999,14 @@ static void run_mutual_jitter(void *device_data)
 	reg[2] = 0x64;	//100 frame
 	reg[3] = 0x00;
 
-	ret = stm_ts_fw_wait_for_jitter_result(ts, reg, 4, &mutual_min, &mutual_max);
+	ret = stm_stm_ts_fw_wait_for_jitter_result(ts, reg, 4, &mutual_min, &mutual_max);
 	if (ret < 0) {
 		input_info(true, &ts->client->dev, "%s: failed to read Mutual jitter\n", __func__);
 		goto ERROR;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "%d,%d", mutual_min, mutual_max);
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -2019,8 +2019,8 @@ static void run_mutual_jitter(void *device_data)
 	return;
 
 ERROR:
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -2052,8 +2052,8 @@ static void run_self_jitter(void *device_data)
 		return;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_release_all_finger(ts);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_release_all_finger(ts);
 
 	/* lock active scan mode */
 	reg[0] = 0xA0;
@@ -2068,14 +2068,14 @@ static void run_self_jitter(void *device_data)
 	reg[2] = 0x64;	/* 100 frame */
 	reg[3] = 0x00;
 
-	ret = stm_ts_fw_wait_for_jitter_result(ts, reg, 4, &tx_p2p, &rx_p2p);
+	ret = stm_stm_ts_fw_wait_for_jitter_result(ts, reg, 4, &tx_p2p, &rx_p2p);
 	if (ret < 0) {
 		input_info(true, &ts->client->dev, "%s: failed to read Self jitter\n", __func__);
 		goto ERROR;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "%d,%d", tx_p2p, rx_p2p);
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -2088,8 +2088,8 @@ static void run_self_jitter(void *device_data)
 	return;
 
 ERROR:
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -2128,8 +2128,8 @@ static void run_jitter_delta_test(void *device_data)
 		goto OUT_JITTER_DELTA;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_release_all_finger(ts);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_release_all_finger(ts);
 
 	disable_irq(ts->irq);
 
@@ -2197,8 +2197,8 @@ static void run_jitter_delta_test(void *device_data)
 
 OUT_JITTER_DELTA:
 
-	ts->stm_ts_systemreset(ts, 0);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	ts->stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	enable_irq(ts->irq);
 
@@ -2313,9 +2313,9 @@ static void get_checksum_data(void *device_data)
 		return;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
+	ts->stm_stm_ts_systemreset(ts, 0);
 
-	rc = stm_ts_get_sysinfo_data(ts, STM_TS_SI_CONFIG_CHECKSUM, 4, (u8 *)&checksum_data);
+	rc = stm_stm_ts_get_sysinfo_data(ts, STM_TS_SI_CONFIG_CHECKSUM, 4, (u8 *)&checksum_data);
 	if (rc < 0) {
 		input_err(true, &ts->client->dev, "%s: Get checksum data Read Fail!! [Data : %08X]\n",
 				__func__, checksum_data);
@@ -2324,7 +2324,7 @@ static void get_checksum_data(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 		return;
 	}
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 
 	snprintf(buff, sizeof(buff), "%08X", checksum_data);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2345,14 +2345,14 @@ static void check_fw_corruption(void *device_data)
 		snprintf(buff, sizeof(buff), "NG");
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
-		rc = stm_ts_fw_corruption_check(ts);
+		rc = stm_stm_ts_fw_corruption_check(ts);
 		if (rc == -STM_TS_ERROR_FW_CORRUPTION || rc == -STM_TS_ERROR_BROKEN_FW) {
 			snprintf(buff, sizeof(buff), "NG");
 			sec->cmd_state = SEC_CMD_STATUS_FAIL;
 		} else {
 			snprintf(buff, sizeof(buff), "OK");
 			sec->cmd_state = SEC_CMD_STATUS_OK;
-			stm_ts_reinit(ts);
+			stm_stm_ts_reinit(ts);
 		}
 	}
 	ts->fw_corruption = false;
@@ -2379,7 +2379,7 @@ static void run_reference_read(void *device_data)
 		return;
 	}
 
-	stm_ts_read_frame(ts, TYPE_BASELINE_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_BASELINE_DATA, &min, &max);
 	snprintf(buff, sizeof(buff), "%d,%d", min, max);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -2435,7 +2435,7 @@ static void run_rawcap_read(void *device_data)
 		return;
 	}
 
-	stm_ts_read_frame(ts, TYPE_RAW_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_RAW_DATA, &min, &max);
 	snprintf(buff, sizeof(buff), "%d,%d", min, max);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -2475,7 +2475,7 @@ static void run_rawcap_read_all(void *device_data)
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
 
 	enter_factory_mode(ts, true);
-	stm_ts_read_frame(ts, TYPE_RAW_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_RAW_DATA, &min, &max);
 
 	for (j = 0; j < ts->tx_count; j++) {
 		for (i = 0; i < ts->rx_count; i++) {
@@ -2513,7 +2513,7 @@ static void run_nonsync_rawcap_read(void *device_data)
 
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
 
-	stm_ts_read_nonsync_frame(ts, &min, &max);
+	stm_stm_ts_read_nonsync_frame(ts, &min, &max);
 
 	snprintf(buff, sizeof(buff), "%d,%d", min, max);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2553,7 +2553,7 @@ static void run_nonsync_rawcap_read_all(void *device_data)
 	}
 
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
-	stm_ts_read_nonsync_frame(ts, &min, &max);
+	stm_stm_ts_read_nonsync_frame(ts, &min, &max);
 
 	for (j = 0; j < ts->tx_count; j++) {
 		for (i = 0; i < ts->rx_count; i++) {
@@ -2619,11 +2619,11 @@ static void run_lp_single_ended_rawcap_read(void *device_data)
 		return;
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
+	ts->stm_stm_ts_systemreset(ts, 0);
 
 	/* Request to Prepare single ended raw data from flash */
 
-	ret = stm_ts_wait_for_echo_event(ts, regr, 4, 0);
+	ret = stm_stm_ts_wait_for_echo_event(ts, regr, 4, 0);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: timeout, ret: %d\n", __func__, ret);
@@ -2631,9 +2631,9 @@ static void run_lp_single_ended_rawcap_read(void *device_data)
 	}
 
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
-	stm_ts_read_nonsync_frame(ts, &min, &max);
+	stm_stm_ts_read_nonsync_frame(ts, &min, &max);
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "%d,%d", min, max);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2645,7 +2645,7 @@ static void run_lp_single_ended_rawcap_read(void *device_data)
 	return;
 
 out:
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2680,12 +2680,12 @@ static void run_lp_single_ended_rawcap_read_all(void *device_data)
 
 	enter_factory_mode(ts, true);
 
-	stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
+	stm_stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
 	sec_delay(30);
 
 	/* Request to Prepare single ended raw data from flash */
 
-	ret = stm_ts_wait_for_echo_event(ts, regr, 4, 0);
+	ret = stm_stm_ts_wait_for_echo_event(ts, regr, 4, 0);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: timeout, ret: %d\n", __func__, ret);
@@ -2694,12 +2694,12 @@ static void run_lp_single_ended_rawcap_read_all(void *device_data)
 
 	run_nonsync_rawcap_read_all(sec);
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	return;
 
 out:
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2725,12 +2725,12 @@ static void run_low_frequency_rawcap_read(void *device_data)
 		return;
 	}
 
-	stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
+	stm_stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
 	sec_delay(30);
 
 	/* Request to Prepare Hight Frequency(ITO) raw data from flash */
 
-	ret = stm_ts_wait_for_echo_event(ts, reg, 4, 30);
+	ret = stm_stm_ts_wait_for_echo_event(ts, reg, 4, 30);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: timeout, ret: %d\n", __func__, ret);
@@ -2740,12 +2740,12 @@ static void run_low_frequency_rawcap_read(void *device_data)
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
 	run_nonsync_rawcap_read(sec);
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	return;
 
 out:
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2775,12 +2775,12 @@ static void run_low_frequency_rawcap_read_all(void *device_data)
 
 	enter_factory_mode(ts, true);
 
-	stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
+	stm_stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
 	sec_delay(30);
 
 	/* Request to Prepare Hight Frequency(ITO) raw data from flash */
 
-	ret = stm_ts_wait_for_echo_event(ts, reg, 4, 30);
+	ret = stm_stm_ts_wait_for_echo_event(ts, reg, 4, 30);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: timeout, ret: %d\n", __func__, ret);
@@ -2792,7 +2792,7 @@ static void run_low_frequency_rawcap_read_all(void *device_data)
 	return;
 
 out:
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2819,12 +2819,12 @@ static void run_high_frequency_rawcap_read(void *device_data)
 		return;
 	}
 
-	stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
+	stm_stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
 	sec_delay(30);
 
 	/* Request to Prepare Hight Frequency(ITO) raw data from flash */
 
-	ret = stm_ts_wait_for_echo_event(ts, reg, 4, 100);
+	ret = stm_stm_ts_wait_for_echo_event(ts, reg, 4, 100);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: timeout, ret: %d\n", __func__, ret);
@@ -2834,7 +2834,7 @@ static void run_high_frequency_rawcap_read(void *device_data)
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
 	run_nonsync_rawcap_read(sec);
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	pr_info("sec_input: %s - correlation\n", __func__);
 	for (i = 0; i < ts->tx_count; i++) {
@@ -2847,7 +2847,7 @@ static void run_high_frequency_rawcap_read(void *device_data)
 	return;
 
 out:
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2878,12 +2878,12 @@ static void run_high_frequency_rawcap_read_all(void *device_data)
 
 	enter_factory_mode(ts, true);
 
-	stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
+	stm_stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
 	sec_delay(30);
 
 	/* Request to Prepare Hight Frequency(ITO) raw data from flash */
 
-	ret = stm_ts_wait_for_echo_event(ts, reg, 4, 100);
+	ret = stm_stm_ts_wait_for_echo_event(ts, reg, 4, 100);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: timeout, ret: %d\n", __func__, ret);
@@ -2891,7 +2891,7 @@ static void run_high_frequency_rawcap_read_all(void *device_data)
 	}
 
 	run_nonsync_rawcap_read_all(sec);
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	pr_info("sec_input: %s - correlation\n", __func__);
 	for (i = 0; i < ts->tx_count; i++) {
@@ -2904,7 +2904,7 @@ static void run_high_frequency_rawcap_read_all(void *device_data)
 	return;
 
 out:
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2929,7 +2929,7 @@ static void run_delta_read(void *device_data)
 		return;
 	}
 
-	stm_ts_read_frame(ts, TYPE_STRENGTH_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_STRENGTH_DATA, &min, &max);
 	snprintf(buff, sizeof(buff), "%d,%d", min, max);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -3031,7 +3031,7 @@ static void run_cs_raw_read_all(void *device_data)
 	}	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s\n", __func__);
 
 	enter_factory_mode(ts, true);
-	stm_ts_read_frame(ts, TYPE_RAW_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_RAW_DATA, &min, &max);
 
 	for (i = 0; i < ts->tx_count; i++) {
 		for (j = 0; j < ts->rx_count; j++) {
@@ -3104,7 +3104,7 @@ static void run_cs_delta_read_all(void *device_data)
 		return;
 	}
 
-	stm_ts_read_frame(ts, TYPE_STRENGTH_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_STRENGTH_DATA, &min, &max);
 
 	for (i = 0; i < ts->tx_count; i++) {
 		for (j = 0; j < ts->rx_count; j++) {
@@ -3166,7 +3166,7 @@ static void get_strength_all_data(void *device_data)
 		return;
 	}
 
-	stm_ts_read_frame(ts, TYPE_STRENGTH_DATA, &min, &max);
+	stm_stm_ts_read_frame(ts, TYPE_STRENGTH_DATA, &min, &max);
 
 	for (i = 0; i < ts->tx_count; i++) {
 		for (j = 0; j < ts->rx_count; j++) {
@@ -3425,8 +3425,8 @@ static int read_ms_cx_data(struct stm_ts_data *ts, u8 active, s8 *cx_min, s8 *cx
 	u8 *pStr = NULL;
 	u8 pTmp[16] = { 0 };
 
-	ts->stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true); // Clear FIFO
-	stm_ts_release_all_finger(ts);
+	ts->stm_stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true); // Clear FIFO
+	stm_stm_ts_release_all_finger(ts);
 
 	sec_delay(20);
 
@@ -3440,7 +3440,7 @@ static int read_ms_cx_data(struct stm_ts_data *ts, u8 active, s8 *cx_min, s8 *cx
 	reg[1] = 0x06;
 	reg[2] = dataID;
 
-	ret = stm_ts_wait_for_echo_event(ts, &reg[0], 3, 0);
+	ret = stm_stm_ts_wait_for_echo_event(ts, &reg[0], 3, 0);
 	if (ret < 0)
 		return ret;
 
@@ -3774,9 +3774,9 @@ static void stm_ts_read_ix_data(struct stm_ts_data *ts, bool allnode)
 		goto out;
 	}
 
-	ts->stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true); // Clear FIFO
+	ts->stm_stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true); // Clear FIFO
 
-	stm_ts_release_all_finger(ts);
+	stm_stm_ts_release_all_finger(ts);
 
 	// Request compensation data type
 	dataID = 0x52;
@@ -3784,7 +3784,7 @@ static void stm_ts_read_ix_data(struct stm_ts_data *ts, bool allnode)
 	reg[1] = 0x06;
 	reg[2] = dataID; // SS - CX total
 
-	rc = stm_ts_wait_for_echo_event(ts, &reg[0], 3, 0);
+	rc = stm_stm_ts_wait_for_echo_event(ts, &reg[0], 3, 0);
 	if (rc < 0) {
 		snprintf(buff, sizeof(buff), "NG");
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
@@ -3978,10 +3978,10 @@ static void run_rawdata_read_all(void *device_data)
 	run_low_frequency_rawcap_read(sec);
 	run_rawcap_read(sec);
 	run_self_raw_read(sec);
-	stm_ts_checking_miscal(ts);
+	stm_stm_ts_checking_miscal(ts);
 	run_cx_data_read(sec);
 	run_ix_data_read(sec);
-	stm_ts_panel_ito_test(ts, OPEN_SHORT_CRACK_TEST);
+	stm_stm_ts_panel_ito_test(ts, OPEN_SHORT_CRACK_TEST);
 	run_mutual_jitter(sec);
 
 	ts->tsp_dump_lock = false;
@@ -3993,7 +3993,7 @@ static void run_rawdata_read_all(void *device_data)
 	input_raw_info_d(ts->plat_data->support_dual_foldable, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
-void stm_ts_run_rawdata_all(struct stm_ts_data *ts)
+void stm_stm_ts_run_rawdata_all(struct stm_ts_data *ts)
 {
 	struct sec_cmd_data *sec = &ts->sec;
 
@@ -4053,15 +4053,15 @@ static void run_trx_short_test(void *device_data)
 					__func__, sec->cmd_param[0], ts->factory_position);
 
 	/* Prevent F3 12 Error */
-	stm_ts_systemreset(ts, 0);
-	stm_ts_set_hsync_scanmode(ts, STM_TS_CMD_LPM_ASYNC_SCAN);
+	stm_stm_ts_systemreset(ts, 0);
+	stm_stm_ts_set_hsync_scanmode(ts, STM_TS_CMD_LPM_ASYNC_SCAN);
 
 	if (ts->factory_position) {
 		// Set Test mode : prepare save test data & fail history
 		regAdd[0] = 0xE4;
 		regAdd[1] = 0x02;
 		// Set power mode = Test mode
-		ret = stm_ts_wait_for_echo_event(ts, &regAdd[0], 2, 0);
+		ret = stm_stm_ts_wait_for_echo_event(ts, &regAdd[0], 2, 0);
 		if (ret < 0) {
 			input_err(true, &ts->client->dev,
 					"%s: fail cm# data save mode on, ret=%d\n", __func__, ret);
@@ -4069,15 +4069,15 @@ static void run_trx_short_test(void *device_data)
 		}
 	}
 
-	ts->stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true); // Clear FIFO
-	stm_ts_release_all_finger(ts);
+	ts->stm_stm_ts_command(ts, STM_TS_CMD_CLEAR_ALL_EVENT, true); // Clear FIFO
+	stm_stm_ts_release_all_finger(ts);
 
 	if (ts->factory_position && (type == MICRO_OPEN_TEST || type == MICRO_SHORT_TEST)) {
 		// set factory for save data & fail history
 		regAdd[0] = 0x74;
 		regAdd[1] = ts->factory_position + 1;	/* sub #2 : 1 + 1, main #3 : 2 + 1 */
 
-		ret = stm_ts_wait_for_echo_event(ts, &regAdd[0], 2, 0);
+		ret = stm_stm_ts_wait_for_echo_event(ts, &regAdd[0], 2, 0);
 		if (ret < 0) {
 			input_err(true, &ts->client->dev,
 					"%s: fail set factory position[%d], ret=%d\n", __func__, regAdd[1], ret);
@@ -4086,7 +4086,7 @@ static void run_trx_short_test(void *device_data)
 	}
 
 	if (type == OPEN_TEST || type == SHORT_TEST) {
-		result = stm_ts_panel_test_result(ts, type);
+		result = stm_stm_ts_panel_test_result(ts, type);
 	} else if (type == MICRO_OPEN_TEST || type == MICRO_SHORT_TEST) {
 		result = stm_ts_panel_test_micro_result(ts, type);
 	}
@@ -4097,7 +4097,7 @@ static void run_trx_short_test(void *device_data)
 		regAdd[0] = 0xE4;
 		regAdd[1] = 0x00;
 
-		ret = stm_ts_wait_for_echo_event(ts, &regAdd[0], 2, 100);
+		ret = stm_stm_ts_wait_for_echo_event(ts, &regAdd[0], 2, 100);
 		if (ret < 0) {
 			input_err(true, &ts->client->dev,
 					"%s: fail set normal mode\n", __func__);
@@ -4106,7 +4106,7 @@ static void run_trx_short_test(void *device_data)
 	}
 
 	/* reinit */
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 
 	ts->plat_data->touch_count = 0;
 
@@ -4125,7 +4125,7 @@ static void run_trx_short_test(void *device_data)
 
 test_fail:
 
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	ts->plat_data->touch_count = 0;
 
 	if (sec->cmd_param[1])
@@ -4302,7 +4302,7 @@ static void run_factory_miscalibration(void *device_data)
 	}
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 	return;
 
@@ -4310,7 +4310,7 @@ error:
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 
 }
@@ -4376,14 +4376,14 @@ static void run_miscalibration(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 	return;
 error:
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 }
 
@@ -4404,7 +4404,7 @@ static void check_connection(void *device_data)
 		return;
 	}
 
-	ret = stm_ts_panel_ito_test(ts, OPEN_TEST);
+	ret = stm_stm_ts_panel_ito_test(ts, OPEN_TEST);
 	if (ret == 0)
 		snprintf(buff, sizeof(buff), "OK");
 	else
@@ -4420,7 +4420,7 @@ int stm_ts_spi_get_tsp_test_result(struct stm_ts_data *ts)
 	u8 data;
 	int ret;
 
-	ret = get_nvm_data(ts, STM_TS_NVM_OFFSET_FAC_RESULT, &data);
+	ret = get_stm_nvm_data(ts, STM_TS_NVM_OFFSET_FAC_RESULT, &data);
 	if (ret < 0)
 		goto err_read;
 
@@ -4532,7 +4532,7 @@ static void set_tsp_test_result(void *device_data)
 			ts->test_result.assy_result == 2 ? "PASS" : "A",
 			ts->test_result.assy_count);
 
-	ret = set_nvm_data(ts, STM_TS_NVM_OFFSET_FAC_RESULT, ts->test_result.data);
+	ret = stm_set_stm_nvm_data(ts, STM_TS_NVM_OFFSET_FAC_RESULT, ts->test_result.data);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: set failed. ret: %d\n", __func__, ret);
@@ -4547,12 +4547,12 @@ static void set_tsp_test_result(void *device_data)
 	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
-int stm_ts_get_disassemble_count(struct stm_ts_data *ts)
+int stm_stm_ts_get_disassemble_count(struct stm_ts_data *ts)
 {
 	u8 data;
 	int ret;
 
-	ret = get_nvm_data(ts, STM_TS_NVM_OFFSET_DISASSEMBLE_COUNT, &data);
+	ret = get_stm_nvm_data(ts, STM_TS_NVM_OFFSET_DISASSEMBLE_COUNT, &data);
 	if (ret < 0)
 		goto err_read;
 
@@ -4583,7 +4583,7 @@ static void increase_disassemble_count(void *device_data)
 		return;
 	}
 
-	ret = stm_ts_get_disassemble_count(ts);
+	ret = stm_stm_ts_get_disassemble_count(ts);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: get failed. ret: %d\n", __func__, ret);
@@ -4597,7 +4597,7 @@ static void increase_disassemble_count(void *device_data)
 	if (ts->disassemble_count < 0xFE)
 		ts->disassemble_count++;
 
-	ret = set_nvm_data(ts, STM_TS_NVM_OFFSET_DISASSEMBLE_COUNT, &ts->disassemble_count);
+	ret = stm_set_stm_nvm_data(ts, STM_TS_NVM_OFFSET_DISASSEMBLE_COUNT, &ts->disassemble_count);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: set failed. ret: %d\n", __func__, ret);
@@ -4630,7 +4630,7 @@ static void get_disassemble_count(void *device_data)
 		return;
 	}
 
-	ret = stm_ts_get_disassemble_count(ts);
+	ret = stm_stm_ts_get_disassemble_count(ts);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: get failed. ret: %d\n", __func__, ret);
@@ -4663,13 +4663,13 @@ static void get_osc_trim_error(void *device_data)
 		return;
 	}
 
-	ret = ts->stm_ts_systemreset(ts, 0);
+	ret = ts->stm_stm_ts_systemreset(ts, 0);
 	if (ret == -STM_TS_ERROR_BROKEN_OSC_TRIM) {
 		snprintf(buff, sizeof(buff), "1");
 	} else {
 		snprintf(buff, sizeof(buff), "0");
 	}
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
@@ -4698,7 +4698,7 @@ static void get_osc_trim_info(void *device_data)
 		return;
 	}
 
-	ret = stm_ts_get_sysinfo_data(ts, STM_TS_SI_OSC_TRIM_INFO, 2, data);
+	ret = stm_stm_ts_get_sysinfo_data(ts, STM_TS_SI_OSC_TRIM_INFO, 2, data);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev,
 				"%s: system info read failed. ret: %d\n", __func__, ret);
@@ -4753,7 +4753,7 @@ static void run_elvss_test(void *device_data)
 		return;
 	}
 
-	stm_ts_systemreset(ts, 0);
+	stm_stm_ts_systemreset(ts, 0);
 	disable_irq(ts->irq);
 
 	memset(data, 0x00, 8);
@@ -4769,7 +4769,7 @@ static void run_elvss_test(void *device_data)
 				"%s: write failed. ret: %d\n", __func__, ret);
 		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
-		stm_ts_reinit(ts);
+		stm_stm_ts_reinit(ts);
 		enable_irq(ts->irq);
 		return;
 	}
@@ -4795,7 +4795,7 @@ static void run_elvss_test(void *device_data)
 		sec_delay(50);
 	}
 
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -4830,7 +4830,7 @@ static void run_snr_non_touched(void *device_data)
 		goto out_init;
 	}
 
-	stm_ts_fix_active_mode(ts, true);
+	stm_stm_ts_fix_active_mode(ts, true);
 
 	/* start Non-touched Peak Noise */
 	address[0] = 0xC7;
@@ -4878,7 +4878,7 @@ static void run_snr_non_touched(void *device_data)
 	address[0] = 0x70;
 	address[1] = 0x00;
 	ts->stm_ts_spi_write(ts, &address[0], 2, NULL, 0);
-	stm_ts_fix_active_mode(ts, false);
+	stm_stm_ts_fix_active_mode(ts, false);
 	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 	return;
@@ -4887,7 +4887,7 @@ out:
 	address[0] = 0x70;
 	address[1] = 0x00;
 	ts->stm_ts_spi_write(ts, &address[0], 2, NULL, 0);
-	stm_ts_fix_active_mode(ts, false);
+	stm_stm_ts_fix_active_mode(ts, false);
 
 out_init:
 	snprintf(buff, sizeof(buff), "NG");
@@ -4929,7 +4929,7 @@ static void run_snr_touched(void *device_data)
 		goto out_init;
 	}
 
-	stm_ts_fix_active_mode(ts, true);
+	stm_stm_ts_fix_active_mode(ts, true);
 
 	/* start touched Peak Noise */
 	address[0] = 0xC7;
@@ -4997,7 +4997,7 @@ static void run_snr_touched(void *device_data)
 	address[0] = 0x70;
 	address[1] = 0x00;
 	ts->stm_ts_spi_write(ts, &address[0], 2, NULL, 0);
-	stm_ts_fix_active_mode(ts, false);
+	stm_stm_ts_fix_active_mode(ts, false);
 	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 	return;
@@ -5005,7 +5005,7 @@ out:
 	address[0] = 0x70;
 	address[1] = 0x00;
 	ts->stm_ts_spi_write(ts, &address[0], 2, NULL, 0);
-	stm_ts_fix_active_mode(ts, false);
+	stm_stm_ts_fix_active_mode(ts, false);
 out_init:
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -5037,7 +5037,7 @@ static void run_color_diff_test(void *device_data)
 		return;
 	}
 
-	stm_ts_systemreset(ts, 0);
+	stm_stm_ts_systemreset(ts, 0);
 
 	disable_irq(ts->irq);
 
@@ -5054,7 +5054,7 @@ static void run_color_diff_test(void *device_data)
 				"%s: write failed. ret: %d\n", __func__, ret);
 		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
-		stm_ts_reinit(ts);
+		stm_stm_ts_reinit(ts);
 		enable_irq(ts->irq);
 		return;
 	}
@@ -5083,7 +5083,7 @@ static void run_color_diff_test(void *device_data)
 		sec_delay(50);
 	}
 
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -5102,7 +5102,7 @@ static void run_sram_test(void *device_data)
 
 	sec_cmd_set_default_result(sec);
 
-	ts->stm_ts_systemreset(ts, 0);
+	ts->stm_stm_ts_systemreset(ts, 0);
 
 	mutex_lock(&ts->fn_mutex);
 	disable_irq(ts->irq);
@@ -5158,7 +5158,7 @@ error:
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "SRAM");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	stm_ts_reinit(ts);
+	stm_stm_ts_reinit(ts);
 	enable_irq(ts->irq);
 }
 
@@ -5194,9 +5194,9 @@ static void run_force_calibration(void *device_data)
 		input_err(true, &ts->client->dev, "%s: finger on touch(%d)\n", __func__, ts->plat_data->touch_count);
 	}
 
-	ts->stm_ts_systemreset(ts, 0);
+	ts->stm_stm_ts_systemreset(ts, 0);
 
-	stm_ts_release_all_finger(ts);
+	stm_stm_ts_release_all_finger(ts);
 
 	if (touch_on) {
 		input_err(true, &ts->client->dev, "%s: finger! do not run autotune\n", __func__);
@@ -5204,8 +5204,8 @@ static void run_force_calibration(void *device_data)
 		input_info(true, &ts->client->dev, "%s: run autotune\n", __func__);
 
 		input_err(true, &ts->client->dev, "%s: RUN OFFSET CALIBRATION\n", __func__);
-		if (stm_ts_execute_autotune(ts, true) < 0) {
-			stm_ts_set_scanmode(ts, ts->scan_mode);
+		if (stm_stm_ts_execute_autotune(ts, true) < 0) {
+			stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 			goto autotune_fail;
 		}
 #ifdef TCLM_CONCEPT
@@ -5223,7 +5223,7 @@ static void run_force_calibration(void *device_data)
 #endif
 	}
 
-	stm_ts_set_scanmode(ts, ts->scan_mode);
+	stm_stm_ts_set_scanmode(ts, ts->scan_mode);
 
 	if (touch_on) {
 		snprintf(buff, sizeof(buff), "NG");
@@ -5311,8 +5311,8 @@ static void factory_cmd_result_all(void *device_data)
 	run_lp_single_ended_rawcap_read(sec);	/* Mutual raw */
 	run_self_raw_read(sec);
 
-	stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
-	stm_ts_release_all_finger(ts);
+	stm_stm_ts_set_scanmode(ts, STM_TS_SCAN_MODE_SCAN_OFF);
+	stm_stm_ts_release_all_finger(ts);
 
 	run_active_cx_data_read(sec);
 	run_cx_data_read(sec);
@@ -5381,7 +5381,7 @@ static void glove_mode(void *device_data)
 				ts->plat_data->touch_functions = (ts->plat_data->touch_functions & (~STM_TS_TOUCHTYPE_BIT_GLOVE));
 		}
 
-		stm_ts_set_touch_function(ts);
+		stm_stm_ts_set_touch_function(ts);
 		snprintf(buff, sizeof(buff), "OK");
 		sec->cmd_state = SEC_CMD_STATUS_OK;
 	}
@@ -5445,7 +5445,7 @@ static void report_rate(void *device_data)
 	} else {
 
 		scan_rate = sec->cmd_param[0];
-		stm_ts_change_scan_rate(ts, scan_rate);
+		stm_stm_ts_change_scan_rate(ts, scan_rate);
 
 		snprintf(buff, sizeof(buff), "OK");
 		sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5484,7 +5484,7 @@ static void set_wirelesscharger_mode(void *device_data)
 	} else {
 		ts->plat_data->wirelesscharger_mode= sec->cmd_param[0];
 
-		stm_ts_set_charger_mode(ts);
+		stm_stm_ts_set_charger_mode(ts);
 
 		snprintf(buff, sizeof(buff), "OK");
 		sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5545,7 +5545,7 @@ static void set_grip_data(void *device_data)
 		}
 
 		mode = mode | G_SET_EDGE_HANDLER;
-		stm_set_grip_data_to_ic(&ts->client->dev, mode);
+		stm_stm_set_grip_data_to_ic(&ts->client->dev, mode);
 	} else if (sec->cmd_param[0] == 1) {	// normal mode
 		if (ts->plat_data->grip_data.edge_range != sec->cmd_param[1])
 			mode = mode | G_SET_EDGE_ZONE;
@@ -5564,7 +5564,7 @@ static void set_grip_data(void *device_data)
 			mode = mode | G_CLR_LANDSCAPE_MODE;
 		}
 
-		stm_set_grip_data_to_ic(&ts->client->dev, mode);
+		stm_stm_set_grip_data_to_ic(&ts->client->dev, mode);
 	} else if (sec->cmd_param[0] == 2) {	// landscape mode
 		if (sec->cmd_param[1] == 0) {	// normal mode
 			ts->plat_data->grip_data.landscape_mode = 0;
@@ -5584,7 +5584,7 @@ static void set_grip_data(void *device_data)
 			goto err_grip_data;
 		}
 
-		stm_set_grip_data_to_ic(&ts->client->dev, mode);
+		stm_stm_set_grip_data_to_ic(&ts->client->dev, mode);
 	} else {
 		input_err(true, &ts->client->dev, "%s: cmd0 is abnormal, %d", __func__, sec->cmd_param[0]);
 		goto err_grip_data;
@@ -5675,7 +5675,7 @@ static void spay_enable(void *device_data)
 	input_info(true, &ts->client->dev, "%s: %s, %02X\n",
 			__func__, sec->cmd_param[0] ? "on" : "off", ts->plat_data->lowpower_mode);
 
-	stm_ts_set_custom_library(ts);
+	stm_stm_ts_set_custom_library(ts);
 
 	snprintf(buff, sizeof(buff), "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5702,7 +5702,7 @@ static void aot_enable(void *device_data)
 	input_info(true, &ts->client->dev, "%s: %s, %02X\n",
 			__func__, sec->cmd_param[0] ? "on" : "off", ts->plat_data->lowpower_mode);
 
-	stm_ts_set_custom_library(ts);
+	stm_stm_ts_set_custom_library(ts);
 
 	snprintf(buff, sizeof(buff), "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5727,7 +5727,7 @@ static void singletap_enable(void *device_data)
 	input_info(true, &ts->client->dev, "%s: %s, %02X\n",
 			__func__, sec->cmd_param[0] ? "on" : "off", ts->plat_data->lowpower_mode);
 
-	stm_ts_set_custom_library(ts);
+	stm_stm_ts_set_custom_library(ts);
 
 	snprintf(buff, sizeof(buff), "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5752,7 +5752,7 @@ static void aod_enable(void *device_data)
 	input_info(true, &ts->client->dev, "%s: %s, %02X\n",
 			__func__, sec->cmd_param[0] ? "on" : "off", ts->plat_data->lowpower_mode);
 
-	stm_ts_set_custom_library(ts);
+	stm_stm_ts_set_custom_library(ts);
 
 	snprintf(buff, sizeof(buff), "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5779,7 +5779,7 @@ static void set_aod_rect(void *device_data)
 	for (i = 0; i < 4; i++)
 		ts->plat_data->aod_data.rect_data[i] = sec->cmd_param[i];
 
-	ret = stm_ts_set_aod_rect(ts);
+	ret = stm_stm_ts_set_aod_rect(ts);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev, "%s: failed. ret: %d\n", __func__, ret);
 		goto NG;
@@ -5880,9 +5880,9 @@ static void fod_enable(void *device_data)
 			disable_irq_wake(ts->client->irq);
 		ts->plat_data->stop_device(ts);
 	} else {
-		stm_ts_set_custom_library(ts);
-		stm_ts_set_press_property(ts);
-		stm_ts_set_fod_finger_merge(ts);
+		stm_stm_ts_set_custom_library(ts);
+		stm_stm_ts_set_press_property(ts);
+		stm_stm_ts_set_fod_finger_merge(ts);
 	}
 
 	mutex_unlock(&ts->modechange);
@@ -5954,7 +5954,7 @@ static void set_fod_rect(void *device_data)
 		goto OK;
 	}
 
-	ret = stm_ts_set_fod_rect(ts);
+	ret = stm_stm_ts_set_fod_rect(ts);
 	if (ret < 0)
 		goto NG;
 
@@ -6005,7 +6005,7 @@ static void external_noise_mode(void *device_data)
 	else
 		ts->plat_data->external_noise_mode &= ~(1 << sec->cmd_param[0]);
 
-	ret = stm_ts_set_external_noise_mode(ts, ts->plat_data->external_noise_mode);
+	ret = stm_stm_ts_set_external_noise_mode(ts, ts->plat_data->external_noise_mode);
 	if (ret < 0)
 		goto NG;
 
@@ -6100,7 +6100,7 @@ static void set_touchable_area(void *device_data)
 		goto out;
 	}
 
-	ret = stm_ts_set_touchable_area(ts);
+	ret = stm_stm_ts_set_touchable_area(ts);
 	if (ret < 0) {
 		snprintf(buff, sizeof(buff), "NG");
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
@@ -6183,7 +6183,7 @@ static void fix_active_mode(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
 		if (ts->plat_data->power_state == SEC_INPUT_STATE_POWER_ON)
-			stm_ts_fix_active_mode(ts, !!sec->cmd_param[0]);
+			stm_stm_ts_fix_active_mode(ts, !!sec->cmd_param[0]);
 		ts->fix_active_mode = !!sec->cmd_param[0];
 	}
 
@@ -6217,7 +6217,7 @@ static void touch_aging_mode(void *device_data)
 
 			ts->stm_ts_spi_write(ts, &reg[0], 3, NULL, 0);
 		} else {
-			stm_ts_reinit(ts);
+			stm_stm_ts_reinit(ts);
 		}
 	}
 	snprintf(buff, sizeof(buff), "OK");
@@ -6242,7 +6242,7 @@ static void ear_detect_enable(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
 		ts->plat_data->ed_enable = sec->cmd_param[0];
-		ret = stm_ts_ear_detect_enable(ts, ts->plat_data->ed_enable);
+		ret = stm_stm_ts_ear_detect_enable(ts, ts->plat_data->ed_enable);
 		if (ret < 0) {
 			snprintf(buff, sizeof(buff), "NG");
 			sec->cmd_state = SEC_CMD_STATUS_FAIL;
@@ -6272,7 +6272,7 @@ static void pocket_mode_enable(void *device_data)
 	} else {
 		ts->plat_data->pocket_mode = sec->cmd_param[0];
 
-		ret = stm_ts_pocket_mode_enable(ts, ts->plat_data->pocket_mode);
+		ret = stm_stm_ts_pocket_mode_enable(ts, ts->plat_data->pocket_mode);
 		if (ret < 0) {
 			snprintf(buff, sizeof(buff), "NG");
 			sec->cmd_state = SEC_CMD_STATUS_FAIL;
@@ -6430,7 +6430,7 @@ static void not_support_cmd(void *device_data)
 	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
-struct sec_cmd sec_cmds[] = {
+struct sec_cmd stm_sec_cmds[] = {
 	{SEC_CMD("fw_update", fw_update),},
 	{SEC_CMD("get_fw_ver_bin", get_fw_ver_bin),},
 	{SEC_CMD("get_fw_ver_ic", get_fw_ver_ic),},
@@ -6535,19 +6535,19 @@ struct sec_cmd sec_cmds[] = {
 	{SEC_CMD("not_support_cmd", not_support_cmd),},
 };
 
-int stm_ts_fn_init(struct stm_ts_data *ts)
+int stm_stm_ts_fn_init(struct stm_ts_data *ts)
 {
 	int retval = 0;
 
 	if (ts->plat_data->support_dual_foldable == MAIN_TOUCH)
-		retval = sec_cmd_init(&ts->sec, sec_cmds,
-				ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP1);
+		retval = sec_cmd_init(&ts->sec, stm_sec_cmds,
+				ARRAY_SIZE(stm_sec_cmds), SEC_CLASS_DEVT_TSP1);
 	else if (ts->plat_data->support_dual_foldable == SUB_TOUCH)
-		retval = sec_cmd_init(&ts->sec, sec_cmds,
-				ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP2);
+		retval = sec_cmd_init(&ts->sec, stm_sec_cmds,
+				ARRAY_SIZE(stm_sec_cmds), SEC_CLASS_DEVT_TSP2);
 	else
-		retval = sec_cmd_init(&ts->sec, sec_cmds,
-			ARRAY_SIZE(sec_cmds), SEC_CLASS_DEVT_TSP);
+		retval = sec_cmd_init(&ts->sec, stm_sec_cmds,
+			ARRAY_SIZE(stm_sec_cmds), SEC_CLASS_DEVT_TSP);
 
 	if (retval < 0) {
 		input_err(true, &ts->client->dev,
@@ -6585,7 +6585,7 @@ exit:
 	return retval;
 }
 
-void stm_ts_fn_remove(struct stm_ts_data *ts)
+void stm_stm_ts_fn_remove(struct stm_ts_data *ts)
 {
 	input_err(true, &ts->client->dev, "%s\n", __func__);
 
