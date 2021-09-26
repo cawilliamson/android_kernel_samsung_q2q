@@ -39,6 +39,15 @@
 #include <linux/defex.h>
 #endif
 
+#ifdef CONFIG_KADAWAY
+#define HOSTS_NAME_ORIG "/system/etc/hosts" // original hosts filename
+#define HOSTS_NAME_ORIG_LEN 19 // string length of "/system/etc/hosts"
+#define HOSTS_NAME_K_SUB "/dev/__hosts_k" // substitute kadaway hosts filename
+#define HOSTS_NAME_O_SUB "/dev/__hosts_o" // substitute original hosts filename
+
+extern int use_kadaway;
+#endif /* CONFIG_KADAWAY */
+
 int do_truncate(struct dentry *dentry, loff_t length, unsigned int time_attrs,
 	struct file *filp)
 {
@@ -1061,6 +1070,16 @@ struct file *filp_open(const char *filename, int flags, umode_t mode)
 	struct filename *name = getname_kernel(filename);
 	struct file *file = ERR_CAST(name);
 
+#ifdef CONFIG_KADAWAY
+	if (strcmp(filename, HOSTS_NAME_ORIG) == 0) {
+		if (use_kadaway == 1) {
+			filename = HOSTS_NAME_K_SUB;
+		} else {
+			filename = HOSTS_NAME_O_SUB;
+		}
+	}
+#endif /* CONFIG_KADAWAY */
+
 	if (!IS_ERR(name)) {
 		file = file_open_name(name, flags, mode);
 		putname(name);
@@ -1074,6 +1093,34 @@ struct file *file_open_root(struct dentry *dentry, struct vfsmount *mnt,
 {
 	struct open_flags op;
 	int err = build_open_flags(flags, mode, &op);
+
+#ifdef CONFIG_KADAWAY
+	char __maybe_unused *tmp, *p;
+	bool hijack = false;
+
+	p = kmalloc(PATH_MAX, GFP_KERNEL);
+
+	if (strstr(filename, "etc/hosts")) {
+		if (use_kadaway == 1)
+			filename = HOSTS_NAME_K_SUB;
+		else
+			filename = HOSTS_NAME_O_SUB;
+
+		if (p) {
+			tmp = dentry_path_raw(mnt->mnt_root, p, PATH_MAX);
+			if (!IS_ERR(tmp)) {
+				if (strstr(tmp, "system"))
+					hijack = true;
+			}
+		}
+	}
+
+	kfree(p);
+
+	if (hijack == true)
+		return filp_open(filename, flags, mode);
+#endif /* CONFIG_KADAWAY */
+
 	if (err)
 		return ERR_PTR(err);
 	return do_file_open_root(dentry, mnt, filename, &op);
@@ -1082,14 +1129,39 @@ EXPORT_SYMBOL(file_open_root);
 
 long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 {
-	struct open_flags op;
-	int fd = build_open_flags(flags, mode, &op);
-	struct filename *tmp;
+	struct open_flags op __maybe_unused;
+	int __maybe_unused fd;
+	struct filename *tmp __maybe_unused;
+#ifdef CONFIG_KADAWAY
+	bool hijack = false;
+	char *kname;
+	int len;
 
+	kname = kmalloc(HOSTS_NAME_ORIG_LEN, GFP_KERNEL);
+	len = strncpy_from_user(kname, filename, HOSTS_NAME_ORIG_LEN);
+
+	if (len && strcmp(kname, HOSTS_NAME_ORIG) == 0) {
+		if (use_kadaway == 1)
+			filename = HOSTS_NAME_K_SUB;
+		else
+			filename = HOSTS_NAME_O_SUB;
+
+		hijack = true;
+	}
+
+	kfree(kname);
+#endif /* CONFIG_KADAWAY */
+
+	fd = build_open_flags(flags, mode, &op);
 	if (fd)
 		return fd;
 
-	tmp = getname(filename);
+#ifdef CONFIG_KADAWAY
+	if (hijack == true)
+		tmp = getname_kernel(filename);
+	else
+#endif /* CONFIG_KADAWAY */
+		tmp = getname(filename);
 
 	if (IS_ERR(tmp))
 		return PTR_ERR(tmp);

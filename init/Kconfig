@@ -1305,6 +1305,27 @@ config LD_DEAD_CODE_DATA_ELIMINATION
 	  present. This option is not well tested yet, so use at your
 	  own risk.
 
+config USERLAND_WORKER
+	bool "Run userspace functions from the kernel"
+	help
+	  Enabling this option will give you access to userspace
+	  functions, being able to call them from the kernel space.
+
+config KADAWAY
+	bool "Enable kAdaway functionality"
+	depends on USERLAND_WORKER
+	help
+	  Enabling this option will embed the kAdaway hosts file
+	  in to the kernel image.
+
+config KADAWAY_DEFAULT
+	bool "Enable kAdaway hosts hijacking by default"
+	depends on KADAWAY && USERLAND_WORKER
+	help
+	  Enabling this option will override calls to /system/etc/hosts
+	  to /dev/__hosts_k by default. This option can be disabled later
+	  by editing /sys/kernel/init/use_kadaway.
+
 config SYSCTL
 	bool
 
