@@ -3266,7 +3266,9 @@ static int wacom_i2c_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&wac_i2c->work_camera_check, wacom_camera_check_work);
 
 	wac_i2c->nb_camera.notifier_call = wacom_get_camera_type_notify;
+#if defined(CONFIG_SAMSUNG_WACOM_NOTIFIER)
 	is_register_eeprom_notifier(&wac_i2c->nb_camera);
+#endif /* CONFIG_SAMSUNG_WACOM_NOTIFIER */
 
 #if IS_ENABLED(CONFIG_HALL_NOTIFIER)
 	wac_i2c->nb_hall.priority = 1;
